@@ -1,0 +1,26 @@
+<?php
+
+/**
+ * Implements hook_schema().
+ */
+function gone_schema() {
+  $schema['gone'] = array(
+    'description' => 'The base table for nodes.',
+    'fields' => array(
+      'nid' => array(
+        'description' => 'The primary identifier for a node.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'status' => array(
+        'description' => 'Whether or not this node should be identifed as Gone with a 410 HTTP error.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+      ),
+    'primary key' => array('nid'),
+  );
+  return $schema;
+}
+

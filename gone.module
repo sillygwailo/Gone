@@ -1,0 +1,149 @@
+<?php
+
+/**
+ * Implements hook_node_load().
+ */
+function gone_node_load($nodes, $types) {
+  $result = db_select('gone', 'g')
+    ->fields('g', array('nid', 'status'))
+    ->condition('nid', array_keys($nodes))
+    ->execute();
+  while ($record = $result->fetchObject()) {
+    $nodes[$record->nid]->gone = $record->status;
+  }
+}
+
+/**
+ * Implements hook_node_insert().
+ */
+function gone_node_insert($node) {
+  if (variable_get('gone_allow_' . $node->type)) {
+    db_insert('gone')
+      ->fields(array(
+        'nid' => $node->nid,
+        'status' => $node->gone,
+      ))
+      ->execute();
+  }
+}
+
+/**
+ * Implements hook_node_update().
+ */
+function gone_node_update($node) {
+  if (variable_get('gone_allow_' . $node->type)) {
+    db_update('gone')
+      ->fields(array('status' => $node->gone))
+      ->condition('nid', $node->nid)
+      ->execute();
+  }
+}
+
+/**
+ * Implements hook_node_validate().
+ */
+function gone_node_validate($node, $form, &$form_state) {
+  $allowed_statuses = array(0, 1);
+  if (isset($node->gone) && (!in_array($node->gone, $allowed_statuses))) {
+    form_set_error('gone', t('Gone 410 status has invalid input.'));
+  }
+}
+
+/**
+ * Implements hook_node_view().
+ */
+function gone_node_view($node, $view_mode, $langcode) {
+  if (isset($node->gone) && $node->gone == 1 /* && attempting to view single node */) {
+    gone_status_page();
+  }
+}
+
+function gone_status_page() {
+  drupal_add_http_header('Status', '410 Gone');
+  $path = drupal_get_normal_path(variable_get('site_410', ''));
+  if ($path && $path != $_GET['q']) {
+    // Custom 410 handler. Set the active item in case there are tabs to
+    // display, or other dependencies on the path.
+    menu_set_active_item($path);
+    $return = menu_execute_active_handler($path, FALSE);
+  }
+  
+  if (empty($return) || $return == MENU_NOT_FOUND || $return == MENU_ACCESS_DENIED) {
+    // Standard 410 handler.
+    drupal_set_title(t('Page is gone'));
+    $return = t('The requested page is gone.');
+  }
+  
+  drupal_set_page_content($return);
+  $page = element_info('page');
+  print drupal_render_page($page);
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function gone_form_node_type_form_alter(&$form, $form_state) {
+  $form['workflow']['gone_allow'] = array(
+    '#type' => 'radios',
+    '#title' => t('Set Gone 410 Status'),
+    '#default_value' => variable_get('gone_allow_' . $form['#node_type']->type, 0),
+    '#options' => array(t('Disabled'), t('Enabled')),
+  );
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function gone_form_system_site_information_settings_alter(&$form, &$form_state, $form_id) {
+  // Modification for the form with the given form ID goes here. For example, if
+  // FORM_ID is "user_register_form" this code would run only on the user
+  // registration form.
+
+  // Add a checkbox to registration form about agreeing to terms of use.
+  $form['error_page']['site_410'] = array(
+    '#type' => 'textfield',
+    '#title' => t("Default 410 (Gone) page"),
+    '#default_value' => variable_get('site_410', ''),
+    '#description' => t('This page is displayed when the content used to exist but no longer does. Applies only to nodes with its Gone status checked.'),
+    '#field_prefix' => url(NULL, array('absolute' => TRUE)) . (variable_get('clean_url', 0) ? '' : '?q='),
+    '#size' => 40,
+    '#required' => FALSE,
+  );
+}
+
+/**
+ * Implements hook_permission().
+ */
+function gone_permission() {
+  return array(
+    'set gone status' =>  array(
+      'title' => t('Set the Gone 410 status on individual nodes'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function gone_form_alter(&$form, &$form_state, $form_id) {
+  // Is this a node form and scheduling has been enabled for this node type
+  if (!empty($form['#node_edit_form']) && user_access('set gone status') && variable_get('gone_allow_' . $form['type']['#value'], 0)) {
+    $node = $form['#node'];
+    // if this is a preview then get the values from the form, not the db
+    if (isset($form_state['values']['op']) && $form_state['values']['op'] == 'Preview') {
+      $gone = $form_state['values']['gone_status'];
+    }
+    elseif (isset($node->nid) && $node->nid > 0) {
+      $gone = db_select('gone', 'g')
+        ->fields('g', array('status'))
+        ->condition('nid', $node->nid)
+        ->execute()
+        ->fetch();
+    }
+    $form['options']['gone'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Gone 410'),
+      '#default_value' => $gone->status,
+    );
+  }  
+}
