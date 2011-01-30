@@ -125,8 +125,9 @@ function gone_form_alter(&$form, &$form_state, $form_id) {
   if (!empty($form['#node_edit_form']) && user_access('set gone status') && variable_get('gone_allow_' . $form['type']['#value'], 0)) {
     $node = $form['#node'];
     // if this is a preview then get the values from the form, not the db
-    if (isset($form_state['values']['op']) && $form_state['values']['op'] == 'Preview') {
-      $gone = $form_state['values']['gone_status'];
+    $gone = new StdClass;
+    if (isset($form_state['node_preview'])) {
+      $gone->status = $form_state['values']['gone'];
     }
     elseif (isset($node->nid) && $node->nid > 0) {
       $gone = db_select('gone', 'g')
@@ -134,6 +135,9 @@ function gone_form_alter(&$form, &$form_state, $form_id) {
         ->condition('nid', $node->nid)
         ->execute()
         ->fetch();
+    }
+    else {
+      $gone->status = 0;
     }
     $form['options']['gone'] = array(
       '#type' => 'checkbox',
