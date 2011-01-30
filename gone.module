@@ -17,7 +17,7 @@ function gone_node_load($nodes, $types) {
  * Implements hook_node_insert().
  */
 function gone_node_insert($node) {
-  if (variable_get('gone_allow_' . $node->type)) {
+  if (variable_get('gone_allow_' . $node->type, 0)) {
     db_insert('gone')
       ->fields(array(
         'nid' => $node->nid,
@@ -31,7 +31,7 @@ function gone_node_insert($node) {
  * Implements hook_node_update().
  */
 function gone_node_update($node) {
-  if (variable_get('gone_allow_' . $node->type)) {
+  if (variable_get('gone_allow_' . $node->type, 0)) {
     db_update('gone')
       ->fields(array('status' => $node->gone))
       ->condition('nid', $node->nid)
