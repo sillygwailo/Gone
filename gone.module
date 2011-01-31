@@ -50,6 +50,17 @@ function gone_node_validate($node, $form, &$form_state) {
 }
 
 /**
+ * Implements hook_node_view_alter().
+ */
+function gone_node_view_alter(&$build) {
+  if ($build['#view_mode'] == 'teaser' || $build['#view_mode'] == 'rss') {
+    if (isset($build['#node']->gone) && $build['#node']->gone == 1) {
+      $build = array();
+    }
+  }
+}
+
+/**
  * Implements hook_node_view().
  */
 function gone_node_view($node, $view_mode, $langcode) {
