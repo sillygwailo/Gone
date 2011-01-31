@@ -121,7 +121,6 @@ function gone_permission() {
  * Implements hook_form_alter().
  */
 function gone_form_alter(&$form, &$form_state, $form_id) {
-  // Is this a node form and scheduling has been enabled for this node type
   if (!empty($form['#node_edit_form']) && user_access('set gone status') && variable_get('gone_allow_' . $form['type']['#value'], 0)) {
     $node = $form['#node'];
     // if this is a preview then get the values from the form, not the db
